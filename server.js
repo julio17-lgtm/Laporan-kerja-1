@@ -158,9 +158,9 @@ loginUserBtn.onclick = () => {
 // LOGIN ADMIN
 loginAdminBtn.onclick = () => {
   const pass = prompt("Masukkan Password Admin:");
-  // PASSWORD ADMIN ADALAH: admin123
-  if (pass === "admin123") {
-    namaUser = "Admin Utama";
+  // PASSWORD ADMIN ADALAH: CAT320
+  if (pass === "CAT320") {
+    namaUser = "Admin";
     isAdmin = true;
     socket.emit('user:join', namaUser + " (Admin)");
     loginSection.classList.add('hidden');
