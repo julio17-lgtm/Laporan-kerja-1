@@ -1,5 +1,6 @@
-{
+
   "name": "laporan-pekerjaan",
+"engines": { "node": "22.x" },
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
