@@ -1,4 +1,4 @@
-'{
+{
   "name": "laporan-pekerjaan",
   "version": "1.0.0",
   "main": "server.js",
@@ -11,9 +11,4 @@
     "socket.io": "^4.7.5",
     "better-sqlite3": "^11.3.0"
   }
-}'
-
-Ketuk Lakukan perubahan... lalu Komit perubahan lagi, ke branch main.
-Setelah itu kabari saya, dan saya cek deploy-nya.
-
-Kirim tindak lanjut
+}
