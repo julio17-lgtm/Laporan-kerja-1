@@ -28,14 +28,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // ================= FRONTEND =================
-const HALAMAN = `<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Laporan Pekerjaan</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+const STYLE = `  * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #1f2937; min-height: 100vh; }
   header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; }
   header h1 { font-size: 1.3rem; }
@@ -72,20 +65,23 @@ const HALAMAN = `<!DOCTYPE html>
   .actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
   .empty { text-align: center; color: #9ca3af; padding: 1.5rem; font-style: italic; }
   .badge-admin { background: #fef3c7; color: #92400e; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.5rem; }
+`;
+
+const HALAMAN_LOGIN = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Masuk - Laporan Pekerjaan</title>
+<style>${STYLE}
+  .login-wrap { max-width: 420px; margin: 12vh auto 0; padding: 0 1rem; }
+  .login-wrap h1 { text-align: center; font-size: 1.5rem; margin-bottom: 1rem; }
 </style>
 </head>
 <body>
-<header>
-  <h1>📋 Laporan Pekerjaan</h1>
-  <div class="users">
-    <span id="userCount">👥 0 online</span><br>
-    <span id="userList" style="font-size:.75rem;"></span>
-  </div>
-</header>
-
-<main>
-  <!-- LOGIN SECTION -->
-  <section id="loginSection" class="card">
+<div class="login-wrap">
+  <h1>ðŸ“‹ Laporan Pekerjaan</h1>
+  <section class="card">
     <h2>Masuk</h2>
     <input id="namaInput" type="text" placeholder="Masukkan nama Anda" maxlength="30" />
     <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
@@ -93,9 +89,58 @@ const HALAMAN = `<!DOCTYPE html>
       <button id="loginAdminBtn" class="admin-btn" style="flex: 1;">Masuk sebagai Admin</button>
     </div>
   </section>
+</div>
+<script>
+if (sessionStorage.getItem('nama')) location.replace('/laporan');
 
+function masuk(nama, admin) {
+  sessionStorage.setItem('nama', nama);
+  sessionStorage.setItem('admin', admin ? '1' : '0');
+  location.href = '/laporan';
+}
+
+document.getElementById('loginUserBtn').onclick = () => {
+  const nama = document.getElementById('namaInput').value.trim();
+  if (!nama) return alert('Masukkan nama Anda');
+  masuk(nama, false);
+};
+
+document.getElementById('loginAdminBtn').onclick = () => {
+  const pass = prompt("Masukkan Password Admin:");
+  if (pass === null) return;
+  // PASSWORD ADMIN ADALAH: CAT320
+  if (pass === "CAT320") masuk("Admin", true);
+  else alert("Password Salah!");
+};
+document.getElementById('namaInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('loginUserBtn').click();
+});
+</script>
+</body>
+</html>`;
+
+const HALAMAN = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daftar Laporan - Laporan Pekerjaan</title>
+<style>${STYLE}</style>
+</head>
+<body>
+<header>
+  <h1>ðŸ“‹ Laporan Pekerjaan</h1>
+  <div class="users">
+    <span id="userCount">ðŸ‘¥ 0 online</span><br>
+    <span id="userList" style="font-size:.75rem;"></span><br>
+    <span id="namaTampil" style="font-size:.8rem;"></span>
+    <button id="logoutBtn" class="danger small" style="margin-left:.4rem;">Keluar</button>
+  </div>
+</header>
+
+<main>
   <!-- FORM SECTION (Pelapor & Admin) -->
-  <section id="formSection" class="card hidden">
+  <section id="formSection" class="card">
     <h2>Tambah Laporan</h2>
     <form id="laporanForm">
       <input id="judul" type="text" placeholder="Judul pekerjaan" required />
@@ -109,15 +154,14 @@ const HALAMAN = `<!DOCTYPE html>
   <!-- ADMIN PANEL SECTION -->
   <section id="adminPanel" class="card hidden">
     <h2>Panel Admin</h2>
-    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Anda masuk sebagai <strong>Admin</strong>. Anda dapat mengubah status dan menghapus laporan.</p>
-    <button id="logoutBtn" class="danger small">Logout Admin</button>
+    <p style="font-size: 0.9rem;">Anda masuk sebagai <strong>Admin</strong>. Anda dapat mengubah status dan menghapus laporan.</p>
   </section>
 
   <!-- DAFTAR LAPORAN -->
   <section class="card">
     <div class="list-header">
       <h2>Daftar Laporan</h2>
-      <span id="connStatus" class="status offline">● Offline</span>
+      <span id="connStatus" class="status offline">â— Offline</span>
     </div>
     <div id="laporanList" class="laporan-list">
       <p class="empty">Belum ada laporan.</p>
@@ -128,15 +172,11 @@ const HALAMAN = `<!DOCTYPE html>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-let namaUser = null;
-let isAdmin = false;
+const namaUser = sessionStorage.getItem('nama');
+const isAdmin = sessionStorage.getItem('admin') === '1';
+if (!namaUser) location.replace('/');
 
-const loginSection = document.getElementById('loginSection');
-const formSection  = document.getElementById('formSection');
 const adminPanel   = document.getElementById('adminPanel');
-const namaInput    = document.getElementById('namaInput');
-const loginUserBtn = document.getElementById('loginUserBtn');
-const loginAdminBtn= document.getElementById('loginAdminBtn');
 const logoutBtn    = document.getElementById('logoutBtn');
 const laporanForm  = document.getElementById('laporanForm');
 const laporanList  = document.getElementById('laporanList');
@@ -144,50 +184,26 @@ const connStatus   = document.getElementById('connStatus');
 const userCount    = document.getElementById('userCount');
 const userList     = document.getElementById('userList');
 
-// LOGIN USER
-loginUserBtn.onclick = () => {
-  const nama = namaInput.value.trim();
-  if (!nama) return alert('Masukkan nama Anda');
-  namaUser = nama;
-  isAdmin = false;
-  socket.emit('user:join', nama);
-  loginSection.classList.add('hidden');
-  formSection.classList.remove('hidden');
-};
+document.getElementById('namaTampil').textContent = 'ðŸ‘¤ ' + (namaUser || '');
+if (isAdmin) adminPanel.classList.remove('hidden');
 
-// LOGIN ADMIN
-loginAdminBtn.onclick = () => {
-  const pass = prompt("Masukkan Password Admin:");
-  // PASSWORD ADMIN ADALAH: CAT320
-  if (pass === "CAT320") {
-    namaUser = "Admin";
-    isAdmin = true;
-    socket.emit('user:join', namaUser + " (Admin)");
-    loginSection.classList.add('hidden');
-    formSection.classList.remove('hidden');
-    adminPanel.classList.remove('hidden');
-  } else {
-    alert("Password Salah!");
-  }
-};
-
-// LOGOUT ADMIN
 logoutBtn.onclick = () => {
-  window.location.reload(); // Refresh halaman untuk reset
+  sessionStorage.clear();
+  location.href = '/';
 };
 
 socket.on('connect', () => {
-  connStatus.textContent = '● Online';
+  connStatus.textContent = 'â— Online';
   connStatus.className = 'status online';
-  if (namaUser) socket.emit('user:join', namaUser);
+  if (namaUser) socket.emit('user:join', isAdmin ? namaUser + ' (Admin)' : namaUser);
 });
 socket.on('disconnect', () => {
-  connStatus.textContent = '● Offline';
+  connStatus.textContent = 'â— Offline';
   connStatus.className = 'status offline';
 });
 
 socket.on('users:online', (users) => {
-  userCount.textContent = '👥 ' + users.length + ' online';
+  userCount.textContent = 'ðŸ‘¥ ' + users.length + ' online';
   userList.textContent = users.length ? '(' + users.join(', ') + ')' : '';
 });
 
@@ -248,6 +264,134 @@ function renderItem(l) {
       <div class="actions">
         <button class="small" onclick="ubahStatus(\${l.id}, 'pending')">Pending</button>
         <button class="small" onclick="ubahStatus(\${l.id}, 'proses')">Proses</button>
+        <button class="small" onclick="ubahStatus(\${l.id}, 'selesai')">Selesai</button>
+        <button class="small danger" onclick="hapus(\${l.id})">Hapus</button>
+      </div>
+    \`;
+  }
+
+  return \`
+    <div class="laporan-item" data-id="\${l.id}">
+      <h3>\${escapeHtml(l.judul)}</h3>
+      <div class="meta">ðŸ‘¤ \${escapeHtml(l.pelapor)} â€¢ \${formatTanggal(l.created_at)}
+        \${l.updated_at !== l.created_at ? ' â€¢ diupdate ' + formatTanggal(l.updated_at) : ''}
+      </div>
+      \${l.deskripsi ? '<p class="deskripsi">' + escapeHtml(l.deskripsi) + '</p>' : ''}
+      \${l.foto ? '<img src="' + l.foto + '" alt="Foto Laporan">' : ''}
+      <div>
+        <span class="badge \${l.status}">\${l.status}</span>
+      </div>
+      \${tombolAksi}
+    </div>
+  \`;
+}
+
+async function ubahStatus(id, status) {
+  if (!isAdmin) return alert("Hanya Admin yang bisa mengubah status!");
+  await fetch('/api/laporan/' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+}
+
+async function hapus(id) {
+  if (!isAdmin) return alert("Hanya Admin yang bisa menghapus laporan!");
+  if (!confirm('Hapus laporan ini?')) return;
+  await fetch('/api/laporan/' + id, { method: 'DELETE' });
+}
+
+socket.on('laporan:baru', (l) => {
+  const empty = laporanList.querySelector('.empty');
+  if (empty) laporanList.innerHTML = '';
+  laporanList.insertAdjacentHTML('afterbegin', renderItem(l));
+});
+
+socket.on('laporan:update', (l) => {
+  const el = laporanList.querySelector('[data-id="' + l.id + '"]');
+  if (el) el.outerHTML = renderItem(l);
+});
+
+socket.on('laporan:hapus', ({ id }) => {
+  const el = laporanList.querySelector('[data-id="' + id + '"]');
+  if (el) el.remove();
+  if (!laporanList.children.length) {
+    laporanList.innerHTML = '<p class="empty">Belum ada laporan.</p>';
+  }
+});
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function formatTanggal(iso) {
+  const d = new Date(iso.replace(' ', 'T') + 'Z');
+  return d.toLocaleString('id-ID', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+muatLaporan();
+</script>
+</body>
+</html>`;
+
+app.get('/', (req, res) => res.send(HALAMAN_LOGIN));
+app.get('/laporan', (req, res) => res.send(HALAMAN));
+
+// ================= REST API =================
+app.get('/api/laporan', (req, res) => {
+  res.json(db.prepare('SELECT * FROM laporan ORDER BY id DESC').all());
+});
+
+app.post('/api/laporan', (req, res) => {
+  const { judul, deskripsi, pelapor, foto } = req.body;
+  if (!judul || !pelapor) return res.status(400).json({ error: 'Wajib diisi' });
+  
+  const info = db.prepare('INSERT INTO laporan (judul, deskripsi, pelapor, foto) VALUES (?, ?, ?, ?)').run(judul, deskripsi || '', pelapor, foto || '');
+  const laporan = db.prepare('SELECT * FROM laporan WHERE id = ?').get(info.lastInsertRowid);
+  io.emit('laporan:baru', laporan);
+  res.status(201).json(laporan);
+});
+
+app.patch('/api/laporan/:id', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!['pending', 'proses', 'selesai'].includes(status)) return res.status(400).json({ error: 'Salah' });
+  db.prepare('UPDATE laporan SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, id);
+  const laporan = db.prepare('SELECT * FROM laporan WHERE id = ?').get(id);
+  io.emit('laporan:update', laporan);
+  res.json(laporan);
+});
+
+app.delete('/api/laporan/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM laporan WHERE id = ?').run(id);
+  io.emit('laporan:hapus', { id: Number(id) });
+  res.json({ success: true });
+});
+
+// ================= SOCKET.IO =================
+io.on('connection', (socket) => {
+  socket.on('user:join', (nama) => {
+    socket.data.nama = (nama || 'Anonim').trim();
+    const users = Array.from(io.sockets.sockets.values()).map(s => s.data.nama).filter(Boolean);
+    io.emit('users:online', users);
+  });
+  socket.on('disconnect', () => {
+    const users = Array.from(io.sockets.sockets.values()).map(s => s.data.nama).filter(Boolean);
+    io.emit('users:online', users);
+  });
+});
+
+// ================= START =================
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('Server jalan di port ' + PORT);
+});lass="small" onclick="ubahStatus(\${l.id}, 'proses')">Proses</button>
         <button class="small" onclick="ubahStatus(\${l.id}, 'selesai')">Selesai</button>
         <button class="small danger" onclick="hapus(\${l.id})">Hapus</button>
       </div>
